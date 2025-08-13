@@ -66,3 +66,12 @@ logs/
 # Temporary files
 *.tmp
 *.temp
+# Claude RAG generated files
+.claude-rag/index.json
+.claude-rag/cache.json
+.claude-rag/*.tmp
+
+# Session management files (track structure, not individual sessions)
+sessions/*.json
+!sessions/index.json
+!sessions/.gitkeep

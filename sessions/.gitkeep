@@ -1,0 +1,3 @@
+# Sessions directory
+# Individual session files are ignored, but we track the index.json file
+# This ensures the sessions/ directory structure is preserved in Git
