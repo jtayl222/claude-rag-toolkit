@@ -10,8 +10,28 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from .core.rag_engine import MultiRepoRAGEngine
-from .utils.repo_detector import RepositoryDetector
+# Handle both relative and absolute imports
+try:
+    # When imported as a module (installed package)
+    from core.rag_engine import MultiRepoRAGEngine
+    from utils.repo_detector import RepositoryDetector
+    from utils.session_manager import SessionManager
+except ImportError:
+    try:
+        # When run from within the package structure
+        from .core.rag_engine import MultiRepoRAGEngine
+        from .utils.repo_detector import RepositoryDetector
+        from .utils.session_manager import SessionManager
+    except ImportError:
+        # When run directly as a script - add src to path
+        import sys
+        from pathlib import Path
+        src_path = Path(__file__).parent
+        sys.path.insert(0, str(src_path))
+        
+        from core.rag_engine import MultiRepoRAGEngine
+        from utils.repo_detector import RepositoryDetector
+        from utils.session_manager import SessionManager
 
 
 class RAGToolkitCLI:
@@ -81,6 +101,50 @@ Examples:
         setup_parser = subparsers.add_parser('setup-mcp', help='Setup MCP server configuration')
         setup_parser.add_argument('--claude-config-dir', help='Path to Claude Code configuration directory')
         
+        # Session management commands
+        session_parser = subparsers.add_parser('session', help='Session management commands')
+        session_subparsers = session_parser.add_subparsers(dest='session_command', help='Session operations')
+        
+        # session start
+        start_parser = session_subparsers.add_parser('start', help='Start a new development session')
+        start_parser.add_argument('name', help='Session name')
+        start_parser.add_argument('-d', '--description', help='Session description')
+        start_parser.add_argument('-o', '--objectives', nargs='*', help='Session objectives')
+        
+        # session update
+        update_parser = session_subparsers.add_parser('update', help='Update current session with progress')
+        update_parser.add_argument('notes', help='Progress notes')
+        update_parser.add_argument('-b', '--blocker', help='Record a blocker')
+        update_parser.add_argument('--decision', help='Record a decision')
+        
+        # session end
+        end_parser = session_subparsers.add_parser('end', help='End the current session')
+        end_parser.add_argument('-s', '--summary', help='Session summary')
+        
+        # session pause
+        pause_parser = session_subparsers.add_parser('pause', help='Pause the current session')
+        pause_parser.add_argument('-r', '--reason', help='Reason for pausing')
+        
+        # session resume
+        resume_parser = session_subparsers.add_parser('resume', help='Resume a paused session')
+        resume_parser.add_argument('session_id', help='Session ID to resume')
+        
+        # session list
+        list_parser = session_subparsers.add_parser('list', help='List all sessions')
+        list_parser.add_argument('--status', choices=['active', 'paused', 'completed', 'cancelled'], help='Filter by status')
+        
+        # session show
+        show_parser = session_subparsers.add_parser('show', help='Show session details')
+        show_parser.add_argument('session_id', help='Session ID to show')
+        
+        # session current
+        session_subparsers.add_parser('current', help='Show current session status')
+        
+        # session report
+        report_parser = session_subparsers.add_parser('report', help='Generate session report')
+        report_parser.add_argument('session_id', help='Session ID for report')
+        report_parser.add_argument('-o', '--output', help='Output file (default: stdout)')
+        
         return parser
     
     def run(self, args: Optional[list] = None) -> int:
@@ -125,6 +189,8 @@ Examples:
             return self._cmd_info(args)
         elif args.command == 'setup-mcp':
             return self._cmd_setup_mcp(args)
+        elif args.command == 'session':
+            return self._cmd_session(args)
         else:
             print(f"❌ Unknown command: {args.command}")
             return 1
@@ -161,7 +227,7 @@ Examples:
         
         print(f"✅ RAG system initialized successfully!")
         print(f"📁 Configuration: {config_path}")
-        print(f"📊 Indexed {results['processed']} files")
+        print(f"📊 Indexed {results['indexed_files']} files")
         
         # Add gitignore entry for generated files
         gitignore_path = project_root / '.gitignore'
@@ -417,8 +483,8 @@ Examples:
         results = engine.index_project(force_reindex=args.force)
         
         print(f"✅ Reindexing complete!")
-        print(f"📊 Processed: {results['processed']} files")
-        print(f"🔄 Updated: {results['updated']} files")
+        print(f"📊 Processed: {results['indexed_files']} files")
+        print(f"📁 Total files: {results['total_files']} files")
         
         return 0
     
@@ -461,6 +527,267 @@ Examples:
             print(f"❌ RAG system not initialized: {e}")
             print("💡 Run 'claude-rag init' to initialize")
             return None
+    
+    def _cmd_session(self, args) -> int:
+        """Handle session management commands."""
+        session_manager = SessionManager('.')
+        
+        if not args.session_command:
+            print("❌ Session command required")
+            print("💡 Use 'claude-rag session --help' for available commands")
+            return 1
+        
+        if args.session_command == 'start':
+            return self._session_start(session_manager, args)
+        elif args.session_command == 'update':
+            return self._session_update(session_manager, args)
+        elif args.session_command == 'end':
+            return self._session_end(session_manager, args)
+        elif args.session_command == 'pause':
+            return self._session_pause(session_manager, args)
+        elif args.session_command == 'resume':
+            return self._session_resume(session_manager, args)
+        elif args.session_command == 'list':
+            return self._session_list(session_manager, args)
+        elif args.session_command == 'show':
+            return self._session_show(session_manager, args)
+        elif args.session_command == 'current':
+            return self._session_current(session_manager, args)
+        elif args.session_command == 'report':
+            return self._session_report(session_manager, args)
+        else:
+            print(f"❌ Unknown session command: {args.session_command}")
+            return 1
+    
+    def _session_start(self, session_manager: SessionManager, args) -> int:
+        """Start a new development session."""
+        try:
+            session = session_manager.start_session(
+                name=args.name,
+                description=args.description or "",
+                objectives=args.objectives or []
+            )
+            
+            print(f"🚀 Started session: {session.name}")
+            print(f"📅 Session ID: {session.session_id}")
+            print(f"🌿 Git branch: {session.initial_branch}")
+            print(f"📝 Initial commit: {session.initial_commit[:8]}")
+            
+            if session.objectives:
+                print(f"🎯 Objectives:")
+                for i, obj in enumerate(session.objectives, 1):
+                    print(f"  {i}. {obj}")
+            
+            print("\n💡 Use 'claude-rag session update \"progress notes\"' to log progress")
+            return 0
+            
+        except Exception as e:
+            print(f"❌ Failed to start session: {e}")
+            return 1
+    
+    def _session_update(self, session_manager: SessionManager, args) -> int:
+        """Update current session with progress."""
+        if not session_manager.update_session(
+            notes=args.notes,
+            blocker=args.blocker,
+            decision=args.decision
+        ):
+            print("❌ No active session found")
+            print("💡 Start a session with 'claude-rag session start <name>'")
+            return 1
+        
+        print(f"✅ Session updated: {args.notes}")
+        
+        if args.blocker:
+            print(f"🚫 Blocker recorded: {args.blocker}")
+        
+        if args.decision:
+            print(f"🎯 Decision recorded: {args.decision}")
+        
+        return 0
+    
+    def _session_end(self, session_manager: SessionManager, args) -> int:
+        """End the current session."""
+        session = session_manager.end_session(summary=args.summary or "")
+        
+        if not session:
+            print("❌ No active session found")
+            return 1
+        
+        print(f"🏁 Session ended: {session.name}")
+        print(f"⏱️  Duration: {session.start_time} → {session.end_time}")
+        
+        if session.lines_added or session.lines_removed:
+            print(f"📊 Code changes: +{session.lines_added} -{session.lines_removed} lines")
+        
+        if args.summary:
+            print(f"📋 Summary: {args.summary}")
+        
+        print(f"\n📄 Session report available: claude-rag session report {session.session_id}")
+        return 0
+    
+    def _session_pause(self, session_manager: SessionManager, args) -> int:
+        """Pause the current session."""
+        if not session_manager.pause_session(reason=args.reason or ""):
+            print("❌ No active session found")
+            return 1
+        
+        print("⏸️  Session paused")
+        if args.reason:
+            print(f"📝 Reason: {args.reason}")
+        
+        return 0
+    
+    def _session_resume(self, session_manager: SessionManager, args) -> int:
+        """Resume a paused session."""
+        if not session_manager.resume_session(args.session_id):
+            print(f"❌ Failed to resume session: {args.session_id}")
+            print("💡 Use 'claude-rag session list --status paused' to see paused sessions")
+            return 1
+        
+        session = session_manager.get_current_session()
+        print(f"▶️  Resumed session: {session.name}")
+        print(f"📅 Session ID: {session.session_id}")
+        
+        return 0
+    
+    def _session_list(self, session_manager: SessionManager, args) -> int:
+        """List all sessions."""
+        sessions = session_manager.list_sessions()
+        
+        # Filter by status if requested
+        if args.status:
+            sessions = [s for s in sessions if s.get('status') == args.status]
+        
+        if not sessions:
+            status_msg = f" with status '{args.status}'" if args.status else ""
+            print(f"📭 No sessions found{status_msg}")
+            return 0
+        
+        print(f"📋 Sessions ({len(sessions)}):")
+        print("=" * 60)
+        
+        # Group by status
+        status_order = ['active', 'paused', 'completed', 'cancelled']
+        status_icons = {
+            'active': '🟢',
+            'paused': '🟡', 
+            'completed': '✅',
+            'cancelled': '❌'
+        }
+        
+        for status in status_order:
+            status_sessions = [s for s in sessions if s.get('status') == status]
+            if not status_sessions:
+                continue
+                
+            icon = status_icons.get(status, '❓')
+            print(f"\n{icon} {status.title()} ({len(status_sessions)}):")
+            
+            for session in status_sessions:
+                session_id = session['session_id'][:8]
+                name = session['name']
+                start_time = session['start_time'][:19].replace('T', ' ')
+                print(f"  • {session_id} - {name} ({start_time})")
+        
+        return 0
+    
+    def _session_show(self, session_manager: SessionManager, args) -> int:
+        """Show detailed session information."""
+        session = session_manager.get_session_details(args.session_id)
+        
+        if not session:
+            print(f"❌ Session not found: {args.session_id}")
+            return 1
+        
+        print(f"📄 Session: {session.name}")
+        print("=" * 60)
+        print(f"ID: {session.session_id}")
+        print(f"Status: {session.status}")
+        print(f"Started: {session.start_time}")
+        
+        if session.end_time:
+            print(f"Ended: {session.end_time}")
+        
+        if session.description:
+            print(f"Description: {session.description}")
+        
+        if session.objectives:
+            print(f"\nObjectives:")
+            for i, obj in enumerate(session.objectives, 1):
+                print(f"  {i}. {obj}")
+        
+        print(f"\nGit Info:")
+        print(f"  Branch: {session.initial_branch}")
+        print(f"  Initial: {session.initial_commit[:8]}")
+        if session.final_commit:
+            print(f"  Final: {session.final_commit[:8]}")
+        
+        if session.lines_added or session.lines_removed:
+            print(f"  Changes: +{session.lines_added} -{session.lines_removed} lines")
+        
+        if session.progress_log:
+            print(f"\nProgress ({len(session.progress_log)} entries):")
+            for entry in session.progress_log[-5:]:  # Show last 5 entries
+                timestamp = entry['timestamp'][:19].replace('T', ' ')
+                print(f"  • {timestamp}: {entry['notes']}")
+        
+        if session.blockers:
+            open_blockers = [b for b in session.blockers if b.get('status') == 'open']
+            if open_blockers:
+                print(f"\nOpen Blockers ({len(open_blockers)}):")
+                for blocker in open_blockers:
+                    timestamp = blocker['timestamp'][:19].replace('T', ' ')
+                    print(f"  🚫 {timestamp}: {blocker['description']}")
+        
+        return 0
+    
+    def _session_current(self, session_manager: SessionManager, args) -> int:
+        """Show current session status."""
+        session = session_manager.get_current_session()
+        
+        if not session:
+            print("📭 No active session")
+            print("💡 Start a session with 'claude-rag session start <name>'")
+            return 0
+        
+        print(f"🟢 Current Session: {session.name}")
+        print(f"📅 ID: {session.session_id}")
+        print(f"⏱️  Started: {session.start_time}")
+        print(f"🌿 Branch: {session.initial_branch}")
+        
+        if session.progress_log:
+            latest = session.progress_log[-1]
+            latest_time = latest['timestamp'][:19].replace('T', ' ')
+            print(f"📝 Latest: {latest_time} - {latest['notes']}")
+        
+        # Show any open blockers
+        open_blockers = [b for b in session.blockers if b.get('status') == 'open']
+        if open_blockers:
+            print(f"🚫 Open blockers: {len(open_blockers)}")
+        
+        return 0
+    
+    def _session_report(self, session_manager: SessionManager, args) -> int:
+        """Generate a detailed session report."""
+        report = session_manager.generate_session_report(args.session_id)
+        
+        if report == "Session not found.":
+            print(f"❌ Session not found: {args.session_id}")
+            return 1
+        
+        if args.output:
+            try:
+                with open(args.output, 'w') as f:
+                    f.write(report)
+                print(f"📄 Report saved to: {args.output}")
+            except Exception as e:
+                print(f"❌ Failed to save report: {e}")
+                return 1
+        else:
+            print(report)
+        
+        return 0
 
 
 def main():
