@@ -14,7 +14,11 @@ from typing import Dict, List, Tuple, Optional, Any
 from collections import defaultdict
 import subprocess
 
-from ..utils.repo_detector import RepositoryDetector
+# Handle both relative and absolute imports
+try:
+    from utils.repo_detector import RepositoryDetector
+except ImportError:
+    from ..utils.repo_detector import RepositoryDetector
 
 
 class MultiRepoRAGEngine:
@@ -30,12 +34,12 @@ class MultiRepoRAGEngine:
         self.index_file = self.rag_dir / "index.json"
         self.cache_file = self.rag_dir / "cache.json"
         
+        # Initialize repository detector first (needed for config creation)
+        self.repo_detector = RepositoryDetector(project_root)
+        
         # Load or create configuration
         self.config = self._load_or_create_config()
         self.index = self._load_or_create_index()
-        
-        # Initialize repository detector
-        self.repo_detector = RepositoryDetector(project_root)
     
     def _load_or_create_config(self) -> Dict:
         """Load existing config or create new one with auto-detection."""
@@ -504,45 +508,67 @@ class MultiRepoRAGEngine:
   Knowledge Graph Nodes: {len(self.index.get('knowledge_graph', {}))}
         """)
     
-    def search(self, query: str, limit: int = 10) -> List[Dict]:
+    def search(self, query: str, limit: int = 10) -> Dict[str, List[Dict]]:
         """Search across all indexed knowledge."""
-        results = []
+        results = {
+            'concept_matches': [],
+            'command_matches': [],
+            'configuration_matches': [],
+            'troubleshooting_matches': []
+        }
         query_lower = query.lower()
         
         for doc_path, doc_info in self.index["documents"].items():
             knowledge = doc_info.get("knowledge", {})
-            score = 0
-            matches = []
             
             # Search concepts
             for concept in knowledge.get("concepts", []):
                 if query_lower in concept["name"].lower():
-                    score += 10
-                    matches.append(f"Concept: {concept['name']}")
+                    results['concept_matches'].append({
+                        "file": doc_path,
+                        "line": concept.get("line", "?"),
+                        "concept": concept["name"],
+                        "score": 10
+                    })
             
             # Search commands
             for cmd in knowledge.get("commands", []):
                 if query_lower in cmd["command"].lower():
-                    score += 5
-                    matches.append(f"Command: {cmd['command'][:60]}...")
+                    results['command_matches'].append({
+                        "file": doc_path,
+                        "line": cmd.get("line", "?"),
+                        "command": cmd["command"],
+                        "type": cmd.get("type", "shell"),
+                        "score": 5
+                    })
+            
+            # Search configurations
+            for config in knowledge.get("configurations", []):
+                if query_lower in config.get("content", "").lower():
+                    results['configuration_matches'].append({
+                        "file": doc_path,
+                        "line": config.get("line", "?"),
+                        "content": config.get("content", ""),
+                        "score": 3
+                    })
             
             # Search troubleshooting
             for trouble in knowledge.get("troubleshooting", []):
-                if query_lower in trouble["content"].lower():
-                    score += 3
-                    matches.append(f"Issue: {trouble['content'][:60]}...")
-            
-            if score > 0:
-                results.append({
-                    "file": doc_path,
-                    "score": score,
-                    "matches": matches[:3],
-                    "repo_type": self.config.get("repo_type")
-                })
+                if query_lower in trouble.get("content", "").lower():
+                    results['troubleshooting_matches'].append({
+                        "file": doc_path,
+                        "line": trouble.get("line", "?"),
+                        "content": trouble.get("content", ""),
+                        "type": trouble.get("type", "issue"),
+                        "score": 3
+                    })
         
-        # Sort by score and limit results
-        results.sort(key=lambda x: x["score"], reverse=True)
-        return results[:limit]
+        # Sort and limit each category
+        for category in results:
+            results[category].sort(key=lambda x: x["score"], reverse=True)
+            results[category] = results[category][:limit]
+        
+        return results
     
     def get_file_context(self, filepath: str) -> Dict:
         """Get context and relationships for a specific file."""
