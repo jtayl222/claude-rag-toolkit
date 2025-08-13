@@ -70,17 +70,38 @@ project-repo/                         # Any target project
 ## Installation
 
 ### 1. Install Shared Toolkit
+
+#### Basic Installation (Zero Dependencies)
 ```bash
 # Clone the toolkit
 git clone https://github.com/yourusername/claude-rag-toolkit.git /home/user/REPOS/claude-rag-toolkit
 cd /home/user/REPOS/claude-rag-toolkit
 
-# Install dependencies
-pip install -r requirements.txt
-
-# Install globally (optional)
+# Basic installation - uses only Python standard library
 pip install -e .
 ```
+
+#### Enhanced Installation Options
+```bash
+# Install with rich CLI output and better UX
+pip install -e ".[rich]"
+
+# Install with performance and validation enhancements  
+pip install -e ".[enhanced]"
+
+# Install with all enhancements (recommended)
+pip install -e ".[full]"
+
+# Development installation
+pip install -e ".[dev]"
+```
+
+#### Package Options
+- **Basic**: Zero external dependencies, uses Python standard library only
+- **Rich**: Enhanced CLI with `rich` terminal output and `click` argument parsing
+- **Enhanced**: Performance boost with `pydantic` validation, `orjson` JSON parsing, `rapidfuzz` search
+- **Full**: All enhancements combined (rich + enhanced)
+- **Dev**: Development tools including testing, linting, and pre-commit hooks
 
 ### 2. Setup in Target Project
 ```bash
@@ -103,36 +124,114 @@ claude-rag setup-mcp
 ## Usage
 
 ### Command Line Interface
+
+#### MLOps Platform Examples
 ```bash
-# Search across project documentation
-claude-rag search "harbor registry setup"
+# Search for specific infrastructure setup
+claude-rag search "harbor registry authentication"
+# Results: Harbor admin passwords, registry secrets, authentication methods
 
-# Find troubleshooting information  
-claude-rag troubleshoot "port 6443 conflict"
+claude-rag search "metallb loadbalancer configuration" 
+# Results: MetalLB IP pools, service configurations, troubleshooting
 
-# Get file context and relationships
-claude-rag context "infrastructure/cluster/site.yml"
+# Find troubleshooting information for common issues
+claude-rag troubleshoot "x509 certificate signed by unknown authority"
+# Results: K3s certificate issues, kubeconfig fixes, TLS troubleshooting
 
-# List available commands for a technology
+claude-rag troubleshoot "DNS resolution failures"
+# Results: Network policies, CoreDNS issues, cross-namespace communication
+
+# Get context for specific configuration files
+claude-rag context "infrastructure/cluster/roles/foundation/k3s_control_plane/tasks/main.yml"
+# Results: Related Ansible tasks, variable dependencies, role relationships
+
+# List commands for specific technologies
 claude-rag commands kubectl
+# Results: Kubernetes commands used in project, with context and examples
 
-# Show recent documentation changes
-claude-rag recent
-
-# Rebuild index after major changes
-claude-rag reindex
+claude-rag commands ansible-playbook
+# Results: Playbook commands, deployment patterns, tag usage
 ```
 
-### MCP Tools for Claude Code
+#### Python Project Examples
+```bash
+# Search for implementation patterns
+claude-rag search "session management implementation"
+# Results: SessionManager class, state persistence, Git integration
 
-When properly configured, Claude Code gains these tools:
+claude-rag search "testing fixtures and mocks"
+# Results: Test setup patterns, conftest.py, mock configurations
 
-1. **search_documentation(query)** - Search project knowledge
-2. **troubleshoot_error(keyword)** - Find error solutions  
-3. **get_file_context(filepath)** - Understand file relationships
-4. **get_related_commands(tech)** - Find relevant commands
-5. **get_recent_changes()** - Track documentation updates
-6. **get_project_stats()** - Index health and coverage
+# Get file relationships and dependencies
+claude-rag context "src/utils/session_manager.py"
+# Results: Import dependencies, test files, CLI integration points
+
+# Find troubleshooting solutions
+claude-rag troubleshoot "import error relative import"
+# Results: Python import fixes, package structure solutions
+```
+
+#### Development Workflow Examples
+```bash
+# Start tracking a development session
+claude-rag session start "implementing-vector-search" -d "Adding semantic search with embeddings"
+
+# Search for related implementation examples during development
+claude-rag search "vector embeddings similarity search"
+
+# Update session progress
+claude-rag session update "Implemented basic vector store, need to add similarity scoring"
+
+# Find configuration examples
+claude-rag search "pydantic configuration validation"
+
+# Check project statistics and coverage
+claude-rag stats
+
+# End session with summary
+claude-rag session end -s "Completed vector search implementation with 85% test coverage"
+```
+
+### MCP (Model Context Protocol) Integration
+
+#### Quick Setup
+```bash
+# Initialize RAG system in your project
+claude-rag init
+
+# Configure MCP server for Claude Code
+claude-rag setup-mcp
+
+# Restart Claude Code to load the new tools
+```
+
+#### Available MCP Tools
+
+When configured, Claude Code gains these intelligent tools:
+
+1. **search_documentation** - Search project knowledge base
+   - Parameters: query, category (optional), limit (optional)
+   - Example: "Search for harbor registry configuration"
+   
+2. **troubleshoot_error** - Find solutions for errors
+   - Parameters: error message
+   - Example: "Help me fix port 6443 connection refused"
+   
+3. **get_file_context** - Understand file relationships
+   - Parameters: filepath
+   - Example: "Explain infrastructure/cluster/site.yml"
+   
+4. **get_related_commands** - Find technology-specific commands
+   - Parameters: technology, limit (optional)
+   - Example: "Show kubectl commands in this project"
+   
+5. **get_project_stats** - View index statistics
+   - No parameters required
+   - Shows indexed files, concepts, and last update time
+   
+6. **reindex_project** - Update documentation index
+   - Parameters: force (optional)
+   - Rebuilds the knowledge base with latest changes
 
 ### Enhanced Git Workflow
 
@@ -277,28 +376,357 @@ claude-rag check-docs-sync
 
 ## Development
 
+### Development Setup
+```bash
+# Clone and setup development environment
+git clone https://github.com/yourusername/claude-rag-toolkit.git
+cd claude-rag-toolkit
+
+# Install with development dependencies
+pip install -e ".[dev]"
+
+# Install pre-commit hooks
+pre-commit install
+
+# Verify setup
+make test
+```
+
+### Development Workflow
+
+#### Session Management
+Track your development sessions with built-in session management:
+```bash
+# Start a development session
+make session-start  # Interactive prompts for name/description
+# Or directly: claude-rag session start "feature-name" -d "Description"
+
+# Log progress during development
+make session-update  # Interactive prompt for notes
+# Or: claude-rag session update "Implemented X, fixed Y"
+
+# End session with summary
+make session-end  # Interactive prompt for summary
+# Or: claude-rag session end -s "Completed feature implementation"
+
+# View session history
+claude-rag session list
+claude-rag session report <session-id>
+```
+
+#### Testing
+```bash
+# Run full test suite with coverage (>80% required)
+make test-cov
+
+# Run tests in watch mode during development
+make test-watch
+
+# Run specific test modules
+pytest tests/unit/utils/test_session_manager.py -v
+pytest tests/unit/core/ -v
+
+# Check test coverage
+pytest --cov=src --cov-report=html
+# Open htmlcov/index.html to view detailed coverage
+```
+
+#### Code Quality
+```bash
+# Format code (automatically via pre-commit)
+make format
+
+# Check formatting without changes
+make format-check
+
+# Run linting
+make lint
+
+# Run all quality checks
+make lint && make format-check && make test
+```
+
 ### Contributing
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/new-repo-type`
-3. Add tests: `pytest tests/test_new_feature.py`
-4. Submit pull request
+
+#### 1. Setup and Branching
+```bash
+# Fork repository and create feature branch
+git checkout -b feature/new-repo-type
+
+# Start development session
+claude-rag session start "new-repo-type" -d "Adding support for new repository type"
+```
+
+#### 2. Development Process
+1. **Write tests first**: Add tests in `tests/unit/` or `tests/integration/`
+2. **Implement feature**: Follow existing patterns and maintain >80% test coverage
+3. **Update documentation**: Add examples and update README if needed
+4. **Log progress**: Use `claude-rag session update` to track milestones
+
+#### 3. Quality Assurance
+```bash
+# Ensure all checks pass
+make test-cov  # Must achieve >80% coverage
+make lint      # Must pass without errors
+make format-check  # Code must be properly formatted
+
+# Pre-commit hooks will automatically run on commit
+git commit -m "feat: add new repository type support"
+```
+
+#### 4. Submission
+```bash
+# End development session
+claude-rag session end -s "Completed new repository type implementation with tests"
+
+# Push and create pull request
+git push origin feature/new-repo-type
+```
 
 ### Adding New Repository Types
-1. Define configuration in `src/config/repo_types.yaml`
-2. Add detection logic in `src/utils/repo_detector.py`
-3. Create extraction rules in `src/config/extraction_rules.yaml`
-4. Add tests in `tests/fixtures/`
 
-### Testing
+#### 1. Detection Logic
+Add detection patterns in `src/utils/repo_detector.py`:
+```python
+def _detect_my_repo_type(self) -> float:
+    """Detect my custom repository type."""
+    score = 0.0
+    
+    # Check for characteristic files
+    if self._path_exists("my-config.yaml"):
+        score += 0.3
+    
+    # Check for specific content patterns
+    if self._file_contains("README.md", ["my-framework"]):
+        score += 0.2
+        
+    return min(score, 1.0)
+```
+
+#### 2. Configuration
+Add repository configuration in `generate_config()` method:
+```python
+elif repo_type == "my-repo-type":
+    return {
+        "repo_type": "my-repo-type",
+        "keywords": ["my-framework", "specific-terms"],
+        "file_patterns": ["*.yaml", "*.md"],
+        "exclude_paths": [".cache", "build/"],
+        "extraction_focus": ["configurations", "commands"]
+    }
+```
+
+#### 3. Testing
+Create comprehensive tests in `tests/unit/utils/test_repo_detector.py`:
+```python
+def test_detect_my_repo_type(self, temp_dir):
+    """Test detection of my repository type."""
+    # Create characteristic files
+    (temp_dir / "my-config.yaml").write_text("framework: my-framework")
+    
+    detector = RepositoryDetector(str(temp_dir))
+    repo_type, confidence, analysis = detector.detect_repository_type()
+    
+    assert repo_type == "my-repo-type"
+    assert confidence > 0.3
+```
+
+### Testing Guidelines
+
+#### Test Structure
+```
+tests/
+├── unit/                    # Unit tests (fast, isolated)
+│   ├── core/               # Core functionality tests
+│   ├── utils/              # Utility module tests
+│   └── conftest.py         # Shared fixtures
+├── integration/            # Integration tests (slower, end-to-end)
+│   └── test_cli.py        # CLI integration tests
+└── fixtures/               # Test data and mock repositories
+    ├── sample_python/      # Python project fixture
+    └── sample_mlops/       # MLOps project fixture
+```
+
+#### Test Requirements
+- **Coverage**: Maintain >80% code coverage
+- **Isolation**: Tests must not depend on external services
+- **Fast execution**: Unit tests should complete in <5 seconds
+- **Clear assertions**: Each test should verify specific behavior
+
+#### Writing Tests
+```python
+def test_specific_behavior(self, temp_dir):
+    """Test specific behavior with clear assertion."""
+    # Arrange: Set up test conditions
+    detector = RepositoryDetector(str(temp_dir))
+    
+    # Act: Execute the behavior being tested
+    result = detector.some_method()
+    
+    # Assert: Verify expected outcome
+    assert result.expected_property == "expected_value"
+```
+
+## Troubleshooting
+
+### Installation Issues
+
+#### Import Errors
 ```bash
-# Run all tests
-pytest
+# Error: ModuleNotFoundError: No module named 'core'
+# Solution: Ensure you're running from the correct directory
+cd /path/to/claude-rag-toolkit
+pip install -e .
 
-# Test specific repository type
-pytest tests/test_mlops_platform.py
+# Or check if package is installed correctly
+pip list | grep claude-rag-toolkit
+```
 
-# Test MCP integration
-pytest tests/test_mcp_server.py -v
+#### Zero-Dependency Core Not Working
+```bash
+# Verify basic installation works
+python -c "import sys; print(sys.modules.keys())"
+claude-rag --help
+
+# If still failing, check Python version
+python --version  # Must be >= 3.8
+```
+
+### Runtime Issues
+
+#### Session Management Problems
+```bash
+# Error: No active session found
+# Check if session exists
+claude-rag session current
+
+# View all sessions
+claude-rag session list
+
+# Resume a previous session
+claude-rag session resume <session-id>
+```
+
+#### Search Not Finding Results
+```bash
+# Check if project is indexed
+claude-rag stats
+
+# Re-index if no files found
+claude-rag reindex
+
+# Verify repository type detection
+claude-rag info
+```
+
+#### File Permission Errors
+```bash
+# Error: Permission denied when creating .claude-rag/
+# Check directory permissions
+ls -la .
+chmod 755 .
+
+# Ensure user has write access
+touch .claude-rag/.test && rm .claude-rag/.test
+```
+
+### Development Issues
+
+#### Tests Failing
+```bash
+# Common test issues and solutions
+
+# 1. Coverage too low
+make test-cov
+# Add tests to achieve >80% coverage
+
+# 2. Import path issues in tests
+# Ensure conftest.py has correct sys.path modifications
+
+# 3. Mock issues with session manager
+# Check that UUID and subprocess mocks are properly configured
+```
+
+#### Pre-commit Hook Failures
+```bash
+# Format issues
+make format  # Auto-fix formatting
+
+# Linting issues
+make lint    # Show specific linting errors
+flake8 src/ tests/ --max-line-length=100
+
+# Hook installation issues
+pre-commit install --force
+pre-commit run --all-files
+```
+
+#### Git Session Tracking Issues
+```bash
+# Error: Git repository not found
+git init  # Initialize git repo if needed
+
+# Error: Git commands failing in session manager
+# Check git is installed and working
+git --version
+git status
+
+# Verify repository has commits
+git log --oneline -n 5
+```
+
+### Performance Issues
+
+#### Slow Indexing
+```bash
+# Large repositories taking too long
+# 1. Check exclude patterns in config
+cat .claude-rag/config.json | grep exclude_paths
+
+# 2. Add more exclusion patterns
+claude-rag init --repo-type python  # Regenerate config with better exclusions
+
+# 3. Monitor file count
+find . -name "*.py" | wc -l  # Should be reasonable for your project
+```
+
+#### Memory Usage
+```bash
+# High memory usage during indexing
+# Monitor with system tools
+top -p $(pgrep -f claude-rag)
+
+# For very large repos, consider selective indexing
+# Edit .claude-rag/config.json to be more selective with file_patterns
+```
+
+### Getting Help
+
+#### Debug Mode
+```bash
+# Enable verbose output for debugging
+export CLAUDE_RAG_DEBUG=1
+claude-rag search "your query"
+
+# Check log files
+tail -f .claude-rag/logs/debug.log
+```
+
+#### Report Issues
+Include this information when reporting bugs:
+```bash
+# System information
+python --version
+pip list | grep claude-rag-toolkit
+git --version
+
+# Project information  
+claude-rag info
+claude-rag stats
+
+# Error reproduction
+# Exact commands that trigger the issue
+# Full error messages and stack traces
 ```
 
 ## Roadmap

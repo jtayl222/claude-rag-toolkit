@@ -25,15 +25,52 @@ setup(
         # No dependencies by default - all optional
     ],
     extras_require={
+        # Enhanced CLI experience with rich output and progress bars
+        "rich": [
+            "rich>=13.0.0",           # Better terminal output, tables, progress bars
+            "click>=8.0.0",           # Enhanced CLI argument parsing
+        ],
+        
+        # Performance and validation enhancements
+        "enhanced": [
+            "pydantic>=2.0.0",        # Configuration validation and data models
+            "orjson>=3.9.0",          # Faster JSON parsing for large files
+            "rapidfuzz>=3.0.0",       # Better fuzzy matching for search
+        ],
+        
+        # All enhancements combined
+        "full": [
+            "rich>=13.0.0",
+            "click>=8.0.0", 
+            "pydantic>=2.0.0",
+            "orjson>=3.9.0",
+            "rapidfuzz>=3.0.0",
+        ],
+        
+        # MCP protocol support (future)
         "mcp": [
             # Commented out since these packages don't exist yet
             # "mcp>=1.0.0",
             # "orjson>=3.9.0",
         ],
+        
+        # Development dependencies
         "dev": [
             "pytest>=7.0.0",
+            "pytest-cov>=4.0.0",
+            "pytest-mock>=3.10.0", 
             "black>=22.0.0",
             "flake8>=4.0.0",
+            "flake8-docstrings>=1.7.0",
+            "pre-commit>=3.0.0",
+        ],
+        
+        # Testing only
+        "test": [
+            "pytest>=7.0.0",
+            "pytest-cov>=4.0.0",
+            "pytest-mock>=3.10.0",
+            "pytest-asyncio>=0.21.0",
         ],
     },
     entry_points={

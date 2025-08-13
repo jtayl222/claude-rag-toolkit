@@ -5,5 +5,40 @@
     "start_time": "2025-08-13T16:01:11.549811",
     "status": "completed",
     "end_time": "2025-08-13T16:02:24.451581"
+  },
+  {
+    "session_id": "981a7e87-c9b7-4e67-a463-784b8dda008a",
+    "name": "add-testing-infrastructure",
+    "start_time": "2025-08-13T16:24:16.974658",
+    "status": "completed",
+    "end_time": "2025-08-13T17:03:33.102020"
+  },
+  {
+    "session_id": "0a831954-0946-4489-bf50-655739740b5f",
+    "name": "fix-dependencies",
+    "start_time": "2025-08-13T17:04:29.742890",
+    "status": "completed",
+    "end_time": "2025-08-13T17:10:32.070647"
+  },
+  {
+    "session_id": "c89c09d8-7fe2-46c6-af69-6c960bacc252",
+    "name": "documentation-improvements",
+    "start_time": "2025-08-13T17:10:56.092196",
+    "status": "completed",
+    "end_time": "2025-08-13T17:19:37.057991"
+  },
+  {
+    "session_id": "c7b626bd-e391-4308-ba4c-bc26788517f5",
+    "name": "core-testing-expansion",
+    "start_time": "2025-08-13T17:38:04.301780",
+    "status": "completed",
+    "end_time": "2025-08-13T18:00:28.987701"
+  },
+  {
+    "session_id": "07d0a4e9-e6b6-4d34-9a23-365e2f8bd607",
+    "name": "mcp-server-implementation",
+    "start_time": "2025-08-13T18:01:28.847906",
+    "status": "completed",
+    "end_time": "2025-08-13T18:11:13.451847"
   }
 ]
