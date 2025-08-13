@@ -1,0 +1,41 @@
+{
+  "repo_type": "python",
+  "keywords": [
+    "python",
+    "pip",
+    "setup",
+    "package",
+    "module",
+    "django",
+    "flask",
+    "fastapi",
+    "pytest",
+    "unittest"
+  ],
+  "file_patterns": [
+    "*.py",
+    "*.md",
+    "*.txt",
+    "*.cfg",
+    "*.ini",
+    "requirements.txt",
+    "setup.py",
+    "pyproject.toml"
+  ],
+  "exclude_paths": [
+    ".git",
+    "__pycache__",
+    "venv",
+    "env",
+    ".tox/",
+    "*.pyc",
+    ".pytest_cache/",
+    "build/",
+    "dist/"
+  ],
+  "extraction_focus": [
+    "python_functions",
+    "class_definitions",
+    "api_endpoints"
+  ]
+}
