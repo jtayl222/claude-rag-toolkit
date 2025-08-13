@@ -1,0 +1,99 @@
+{
+  "version": "1.0",
+  "description": "Claude RAG Toolkit MCP Configuration",
+  "tools": {
+    "search_documentation": {
+      "description": "Search project documentation and knowledge base",
+      "parameters": {
+        "query": {
+          "type": "string",
+          "description": "Search query or keywords"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["concepts", "commands", "configurations", "troubleshooting", "all"],
+          "description": "Limit search to specific category",
+          "default": "all"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximum number of results",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 50
+        }
+      }
+    },
+    "troubleshoot_error": {
+      "description": "Find solutions for specific errors or issues",
+      "parameters": {
+        "error": {
+          "type": "string",
+          "description": "Error message or keyword"
+        }
+      }
+    },
+    "get_file_context": {
+      "description": "Get detailed context and relationships for a file",
+      "parameters": {
+        "filepath": {
+          "type": "string",
+          "description": "Path to the file (relative to project root)"
+        }
+      }
+    },
+    "get_related_commands": {
+      "description": "Find commands related to a specific technology or tool",
+      "parameters": {
+        "technology": {
+          "type": "string",
+          "description": "Technology name (kubectl, docker, ansible, etc.)"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximum number of commands to return",
+          "default": 15,
+          "minimum": 1,
+          "maximum": 50
+        }
+      }
+    },
+    "get_project_stats": {
+      "description": "Get project statistics and index health information",
+      "parameters": {}
+    },
+    "reindex_project": {
+      "description": "Rebuild the project documentation index",
+      "parameters": {
+        "force": {
+          "type": "boolean",
+          "description": "Force reindex all files",
+          "default": false
+        }
+      }
+    }
+  },
+  "server": {
+    "command": "python3",
+    "args": [
+      "-m", "claude_rag_toolkit.mcp_server",
+      "--project-root", "${PROJECT_ROOT}"
+    ],
+    "env": {
+      "CLAUDE_RAG_TOOLKIT_PATH": "${TOOLKIT_PATH}",
+      "PYTHONPATH": "${TOOLKIT_PATH}/src"
+    }
+  },
+  "installation": {
+    "requirements": [
+      "Python 3.8+",
+      "Claude RAG Toolkit",
+      "Project-specific .claude-rag/ directory"
+    ],
+    "setup_commands": [
+      "cd ${PROJECT_ROOT}",
+      "claude-rag init",
+      "claude-rag setup-mcp"
+    ]
+  }
+}

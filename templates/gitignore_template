@@ -1,0 +1,13 @@
+# Claude RAG Toolkit generated files
+# Add these entries to your project's .gitignore
+
+# Generated index files (never commit)
+.claude-rag/index.json
+.claude-rag/cache.json
+.claude-rag/*.tmp
+.claude-rag/*.log
+
+# Keep the configuration file
+!.claude-rag/config.json
+!.claude-rag/.gitignore
+!.claude-rag/README_MCP.md

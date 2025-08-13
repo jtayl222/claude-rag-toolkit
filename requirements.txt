@@ -1,0 +1,20 @@
+# Claude RAG Toolkit Dependencies
+
+# Core dependencies
+pathlib2>=2.3.0; python_version < "3.4"
+
+# Optional MCP dependencies (install with: pip install claude-rag-toolkit[mcp])
+# mcp>=1.0.0
+# orjson>=3.9.0
+
+# Development dependencies (install with: pip install claude-rag-toolkit[dev])
+# pytest>=7.0.0
+# pytest-asyncio>=0.21.0
+# black>=22.0.0
+# flake8>=4.0.0
+# mypy>=0.950
+
+# Documentation dependencies (install with: pip install claude-rag-toolkit[docs])
+# mkdocs>=1.4.0
+# mkdocs-material>=8.0.0
+# mkdocs-mermaid2-plugin>=0.6.0
