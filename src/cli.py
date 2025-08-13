@@ -513,10 +513,91 @@ Examples:
     
     def _cmd_setup_mcp(self, args) -> int:
         """Setup MCP server configuration."""
-        # This would set up MCP configuration for Claude Code
+        import json
+        import os
+        from pathlib import Path
+        
         print("🔧 Setting up MCP server configuration...")
-        print("⚠️  This feature is not yet implemented")
-        print("💡 Manually configure MCP server using documentation in README_MCP.md")
+        
+        # Get Claude config directory
+        if args.claude_config_dir:
+            config_dir = Path(args.claude_config_dir)
+        else:
+            # Try common locations
+            home = Path.home()
+            possible_dirs = [
+                home / ".config" / "claude",
+                home / ".claude",
+                home / "Library" / "Application Support" / "Claude",
+            ]
+            
+            config_dir = None
+            for dir_path in possible_dirs:
+                if dir_path.exists():
+                    config_dir = dir_path
+                    break
+            
+            if not config_dir:
+                print("❌ Could not find Claude configuration directory")
+                print("💡 Please specify with --claude-config-dir")
+                return 1
+        
+        # Ensure MCP config file exists
+        mcp_config_file = config_dir / "mcp.json"
+        
+        if mcp_config_file.exists():
+            print(f"📄 Found existing MCP config: {mcp_config_file}")
+            with open(mcp_config_file, 'r') as f:
+                mcp_config = json.load(f)
+        else:
+            print(f"📝 Creating new MCP config: {mcp_config_file}")
+            mcp_config = {"servers": {}}
+        
+        # Get project and toolkit paths
+        project_root = Path.cwd().resolve()
+        toolkit_path = Path(__file__).parent.parent.resolve()
+        
+        # Create server configuration
+        server_config = {
+            "command": "python3",
+            "args": [
+                str(toolkit_path / "src" / "integrations" / "mcp_server_enhanced.py"),
+                "--project-root", str(project_root)
+            ],
+            "env": {
+                "PYTHONPATH": str(toolkit_path / "src")
+            }
+        }
+        
+        # Add to MCP config
+        project_name = project_root.name
+        server_key = f"claude-rag-{project_name}"
+        
+        mcp_config["servers"][server_key] = server_config
+        
+        # Save config
+        config_dir.mkdir(parents=True, exist_ok=True)
+        with open(mcp_config_file, 'w') as f:
+            json.dump(mcp_config, f, indent=2)
+        
+        print(f"✅ MCP server configured: {server_key}")
+        print(f"📁 Project root: {project_root}")
+        print(f"🔧 Toolkit path: {toolkit_path}")
+        print()
+        print("📋 Configuration added to:", mcp_config_file)
+        print()
+        print("🚀 Next steps:")
+        print("1. Restart Claude Code to load the new configuration")
+        print("2. The RAG tools will be available in your conversation")
+        print()
+        print("💡 Available tools:")
+        print("  - search_documentation: Search project knowledge base")
+        print("  - troubleshoot_error: Find error solutions")
+        print("  - get_file_context: Get file relationships")
+        print("  - get_related_commands: Find technology commands")
+        print("  - get_project_stats: View index statistics")
+        print("  - reindex_project: Update documentation index")
+        
         return 0
     
     def _get_engine(self) -> Optional[MultiRepoRAGEngine]:
