@@ -69,6 +69,8 @@ logs/
 # Claude RAG generated files
 .claude-rag/index.json
 .claude-rag/cache.json
+.claude-rag/config.json
+.claude-rag/embeddings/
 .claude-rag/*.tmp
 
 # Session management files (track structure, not individual sessions)

@@ -81,10 +81,10 @@ sudo apt install pipx  # On Ubuntu/Debian
 # OR
 python3 -m pip install --user pipx
 
-# Install claude-rag globally
+# Install claude-rag globally with all features
 pipx install -e /home/user/REPOS/claude-rag-toolkit
 
-# Now claude-rag is available everywhere
+# Now claude-rag is available everywhere with semantic search
 claude-rag --help
 ```
 
@@ -98,7 +98,7 @@ cd /home/user/REPOS/claude-rag-toolkit
 python3 -m venv venv
 source venv/bin/activate
 
-# Install the toolkit
+# Install the toolkit with all features
 pip install -e .
 
 # Create global alias (add to ~/.bashrc)
@@ -106,37 +106,45 @@ echo 'alias claude-rag="/home/user/REPOS/claude-rag-toolkit/venv/bin/claude-rag"
 source ~/.bashrc
 ```
 
-#### Method C: Standard pip install (if allowed by your system)
+#### Method C: Standard pip install (default with all features)
 ```bash
 # Clone the toolkit
 git clone https://github.com/yourusername/claude-rag-toolkit.git /home/user/REPOS/claude-rag-toolkit
 cd /home/user/REPOS/claude-rag-toolkit
 
-# Basic installation - uses only Python standard library
+# Full installation with all features (default)
 pip install -e .
 # Note: On modern systems, you may need: pip install --user -e . --break-system-packages
 ```
 
-#### Enhanced Installation Options
+#### Alternative Installation Options
 ```bash
-# Install with rich CLI output and better UX
+# Minimal installation - no dependencies (for lightweight deployments)
+pip install -e ".[minimal]"
+
+# Install with rich CLI output and better UX only
 pip install -e ".[rich]"
 
-# Install with performance and validation enhancements  
+# Install with performance and validation enhancements only
 pip install -e ".[enhanced]"
 
-# Install with all enhancements (recommended)
-pip install -e ".[full]"
+# Install with PDF support only
+pip install -e ".[pdf]"
+
+# Install with semantic search (embeddings) only
+pip install -e ".[embeddings]"
 
 # Development installation
 pip install -e ".[dev]"
 ```
 
 #### Package Options
-- **Basic**: Zero external dependencies, uses Python standard library only
+- **Default**: All enhancements included (rich + enhanced + pdf + embeddings) - **Recommended**
+- **Minimal**: Zero external dependencies, uses Python standard library only
 - **Rich**: Enhanced CLI with `rich` terminal output and `click` argument parsing
 - **Enhanced**: Performance boost with `pydantic` validation, `orjson` JSON parsing, `rapidfuzz` search
-- **Full**: All enhancements combined (rich + enhanced)
+- **PDF**: PDF document parsing with `PyPDF2` and `pdfplumber` libraries
+- **Embeddings**: Semantic search with Sentence Transformers, enabling intelligent synonym expansion and document similarity
 - **Dev**: Development tools including testing, linting, and pre-commit hooks
 
 ### 2. Setup in Target Project
@@ -166,9 +174,11 @@ claude-rag setup-mcp
 # Search for specific infrastructure setup
 claude-rag search "harbor registry authentication"
 # Results: Harbor admin passwords, registry secrets, authentication methods
+# Semantic matches: Related Docker registry configs, container authentication
 
 claude-rag search "metallb loadbalancer configuration" 
 # Results: MetalLB IP pools, service configurations, troubleshooting
+# Semantic matches: Related service configs, networking setup
 
 # Find troubleshooting information for common issues
 claude-rag troubleshoot "x509 certificate signed by unknown authority"
@@ -365,12 +375,19 @@ With RAG integration, git workflows become intelligence-driven:
 - **Kubernetes**: Resources, configurations, network policies
 - **Documentation**: Headers, code blocks, cross-references
 
-### 3. **Cross-Repository Learning**
+### 3. **Semantic Search with Embeddings**
+- **Local AI Models**: Uses Sentence Transformers for privacy-preserving semantic search
+- **Intelligent Synonyms**: Finds "harbor persistence" when searching for "pvc" or "storage"
+- **Hybrid Search**: Combines exact keyword matching with semantic similarity
+- **Document Similarity**: Discovers related configurations and patterns
+- **Smart Expansion**: Automatically finds related terms and concepts
+
+### 4. **Cross-Repository Learning**
 - Shared patterns across similar project types
 - Common troubleshooting database
 - Best practice recommendations
 
-### 4. **Change Detection & Notifications**
+### 5. **Change Detection & Notifications**
 - Git integration to track documentation changes
 - Alerts when code changes may require doc updates
 - Prevents documentation drift proactively
@@ -640,14 +657,24 @@ pip install -e .
 pip list | grep claude-rag-toolkit
 ```
 
-#### Zero-Dependency Core Not Working
+#### Installation with Dependencies Failing
 ```bash
-# Verify basic installation works
-python -c "import sys; print(sys.modules.keys())"
+# If installation fails due to missing system dependencies
+# Install system packages needed for ML libraries
+sudo apt-get install python3-dev build-essential
+
+# For sentence-transformers and torch dependencies
+pip install --upgrade pip setuptools wheel
+
+# Verify installation works
+python -c "import sentence_transformers; print('Semantic search available')"
 claude-rag --help
 
 # If still failing, check Python version
 python --version  # Must be >= 3.8
+
+# For minimal installation without ML dependencies
+pip install -e ".[minimal]"
 ```
 
 ### Runtime Issues
@@ -789,7 +816,7 @@ claude-rag stats
 
 ## Roadmap
 
-- [ ] **Vector Embeddings**: Semantic search with sentence transformers
+- [x] **Vector Embeddings**: Semantic search with sentence transformers ✅
 - [ ] **Live Sync**: Real-time index updates on file changes  
 - [ ] **Team Sharing**: Shared knowledge base with conflict resolution
 - [ ] **Analytics**: Track most searched topics and knowledge gaps
