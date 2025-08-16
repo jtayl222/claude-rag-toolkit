@@ -410,9 +410,9 @@ class RepositoryDetector:
                     "calico", "cilium", "ansible", "kubernetes"
                 ],
                 "file_patterns": [
-                    "*.yml", "*.yaml", "*.md", "*.sh", 
+                    "*.yml", "*.yaml", "*.md", "*.sh", "*.pdf",
                     "roles/**/*.yml", "inventory/**/*.yml",
-                    "scripts/*.sh", "docs/*.md"
+                    "scripts/*.sh", "docs/*.md", "docs/*.pdf"
                 ],
                 "exclude_paths": [
                     # Version control and package managers
@@ -439,7 +439,13 @@ class RepositoryDetector:
                     "ansible_tasks", "kubernetes_resources", "shell_commands",
                     "troubleshooting_sections", "configuration_examples",
                     "service_endpoints", "network_policies"
-                ]
+                ],
+                "semantic_search": {
+                    "enabled": True,
+                    "model": "all-MiniLM-L6-v2",
+                    "similarity_threshold": 0.3,
+                    "max_results": 10
+                }
             },
             "ml-model": {
                 "repo_type": "ml-model",
@@ -449,9 +455,9 @@ class RepositoryDetector:
                     "pytorch", "tensorflow", "scikit-learn", "pandas", "numpy"
                 ],
                 "file_patterns": [
-                    "*.py", "*.ipynb", "*.yaml", "*.yml", "*.md", 
+                    "*.py", "*.ipynb", "*.yaml", "*.yml", "*.md", "*.pdf",
                     "requirements.txt", "Dockerfile", "*.json",
-                    "notebooks/*.ipynb", "src/**/*.py"
+                    "notebooks/*.ipynb", "src/**/*.py", "docs/**/*.pdf"
                 ],
                 "exclude_paths": [
                     # Version control
@@ -477,7 +483,13 @@ class RepositoryDetector:
                 "extraction_focus": [
                     "python_functions", "jupyter_cells", "model_configs",
                     "pipeline_definitions", "api_endpoints", "training_scripts"
-                ]
+                ],
+                "semantic_search": {
+                    "enabled": True,
+                    "model": "all-MiniLM-L6-v2",
+                    "similarity_threshold": 0.3,
+                    "max_results": 10
+                }
             },
             "kubernetes": {
                 "repo_type": "kubernetes",
@@ -507,7 +519,13 @@ class RepositoryDetector:
                 ],
                 "extraction_focus": [
                     "kubernetes_resources", "helm_charts", "kustomize_configs"
-                ]
+                ],
+                "semantic_search": {
+                    "enabled": True,
+                    "model": "all-MiniLM-L6-v2",
+                    "similarity_threshold": 0.3,
+                    "max_results": 10
+                }
             },
             "ansible": {
                 "repo_type": "ansible",
@@ -538,7 +556,13 @@ class RepositoryDetector:
                 ],
                 "extraction_focus": [
                     "ansible_tasks", "playbook_structure", "role_definitions"
-                ]
+                ],
+                "semantic_search": {
+                    "enabled": True,
+                    "model": "all-MiniLM-L6-v2",
+                    "similarity_threshold": 0.3,
+                    "max_results": 10
+                }
             },
             "python": {
                 "repo_type": "python",
@@ -547,8 +571,8 @@ class RepositoryDetector:
                     "django", "flask", "fastapi", "pytest", "unittest"
                 ],
                 "file_patterns": [
-                    "*.py", "*.md", "*.txt", "*.cfg", "*.ini",
-                    "requirements.txt", "setup.py", "pyproject.toml"
+                    "*.py", "*.md", "*.txt", "*.cfg", "*.ini", "*.pdf",
+                    "requirements.txt", "setup.py", "pyproject.toml", "docs/**/*.pdf"
                 ],
                 "exclude_paths": [
                     # Version control
@@ -572,7 +596,13 @@ class RepositoryDetector:
                 ],
                 "extraction_focus": [
                     "python_functions", "class_definitions", "api_endpoints"
-                ]
+                ],
+                "semantic_search": {
+                    "enabled": True,
+                    "model": "all-MiniLM-L6-v2",
+                    "similarity_threshold": 0.3,
+                    "max_results": 10
+                }
             },
             "documentation": {
                 "repo_type": "documentation", 
@@ -581,8 +611,8 @@ class RepositoryDetector:
                     "readme", "wiki", "knowledge", "manual"
                 ],
                 "file_patterns": [
-                    "*.md", "*.rst", "*.txt", "*.html",
-                    "docs/**/*.md", "wiki/**/*.md"
+                    "*.md", "*.rst", "*.txt", "*.html", "*.pdf",
+                    "docs/**/*.md", "wiki/**/*.md", "docs/**/*.pdf"
                 ],
                 "exclude_paths": [
                     # Version control
@@ -605,7 +635,13 @@ class RepositoryDetector:
                 ],
                 "extraction_focus": [
                     "documentation_structure", "cross_references", "tutorials"
-                ]
+                ],
+                "semantic_search": {
+                    "enabled": True,
+                    "model": "all-MiniLM-L6-v2",
+                    "similarity_threshold": 0.3,
+                    "max_results": 10
+                }
             }
         }
         
