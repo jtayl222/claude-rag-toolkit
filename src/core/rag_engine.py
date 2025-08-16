@@ -104,10 +104,24 @@ class MultiRepoRAGEngine:
             if exclude in relative_path:
                 return False
         
-        # Check file patterns
+        # Check file patterns - support both simple and complex patterns
         for pattern in self.config.get("file_patterns", ["*.md"]):
-            if filepath.match(pattern) or any(filepath.glob(pattern)):
+            # Simple pattern like *.yml
+            if '*' in pattern and '/' not in pattern:
+                if filepath.match(pattern):
+                    return True
+            # Complex pattern like roles/**/*.yml or inventory/**/*.yml
+            elif '**' in pattern:
+                import fnmatch
+                if fnmatch.fnmatch(relative_path, pattern):
+                    return True
+            # Exact match
+            elif relative_path == pattern:
                 return True
+            # Simple suffix match
+            elif pattern.startswith('*.'):
+                if filepath.suffix == pattern[1:]:
+                    return True
         
         return False
     
@@ -146,20 +160,26 @@ class MultiRepoRAGEngine:
             "ansible_tasks": [],
             "kubernetes_resources": [],
             "service_endpoints": [],
-            "network_policies": []
+            "network_policies": [],
+            "storage_configs": [],
+            "harbor_configs": [],
+            "variables": []
         }
         
         in_task = False
         current_task = None
         
         for i, line in enumerate(lines):
+            line_lower = line.lower()
+            
             # Ansible task detection
             if line.strip().startswith("- name:"):
                 task_name = line.split("- name:", 1)[1].strip()
                 knowledge["ansible_tasks"].append({
                     "name": task_name,
                     "line": i,
-                    "file": filepath
+                    "file": filepath,
+                    "type": "ansible_task"
                 })
             
             # Kubernetes resource detection
@@ -167,15 +187,49 @@ class MultiRepoRAGEngine:
                 knowledge["kubernetes_resources"].append({
                     "line": i,
                     "content": line.strip(),
-                    "file": filepath
+                    "file": filepath,
+                    "type": "k8s_resource"
                 })
             
+            # Storage and persistence detection
+            if any(keyword in line_lower for keyword in ['persistentvolumeclaim', 'pvc', 'storage:', 'storageclass', 'volumeclaim', 'persistent']):
+                knowledge["storage_configs"].append({
+                    "line": i,
+                    "content": line.strip(),
+                    "file": filepath,
+                    "type": "storage_config",
+                    "keywords": [kw for kw in ['persistentvolumeclaim', 'pvc', 'storage', 'storageclass', 'volumeclaim', 'persistent'] if kw in line_lower]
+                })
+            
+            # Harbor-specific configurations
+            if any(keyword in line_lower for keyword in ['harbor', 'registry', 'docker_registry', 'container_registry']):
+                knowledge["harbor_configs"].append({
+                    "line": i,
+                    "content": line.strip(),
+                    "file": filepath,
+                    "type": "harbor_config"
+                })
+            
+            # Ansible variables detection (including Jinja2 templates)
+            if '{{' in line and '}}' in line:
+                import re
+                variables = re.findall(r'{{\s*([^}]+)\s*}}', line)
+                for var in variables:
+                    knowledge["variables"].append({
+                        "variable": var.strip(),
+                        "line": i,
+                        "file": filepath,
+                        "context": line.strip(),
+                        "type": "jinja2_variable"
+                    })
+            
             # Service endpoint detection
-            if "loadbalancer_ip" in line.lower() or "nodeport" in line.lower():
+            if "loadbalancer_ip" in line_lower or "nodeport" in line_lower:
                 knowledge["service_endpoints"].append({
                     "line": i,
                     "content": line.strip(),
-                    "file": filepath
+                    "file": filepath,
+                    "type": "service_endpoint"
                 })
         
         return knowledge
@@ -186,7 +240,8 @@ class MultiRepoRAGEngine:
             "model_configs": [],
             "training_scripts": [],
             "api_endpoints": [],
-            "data_schemas": []
+            "data_schemas": [],
+            "functions": []
         }
         
         for i, line in enumerate(lines):
@@ -352,16 +407,62 @@ class MultiRepoRAGEngine:
         
         return refs
     
-    def index_project(self, force_reindex: bool = False) -> Dict:
+    def _expand_search_terms(self, query: str) -> List[str]:
+        """Expand search terms with synonyms for better matching."""
+        # MLOps/Infrastructure synonyms
+        synonyms = {
+            'persistence': ['persistent', 'pvc', 'persistentvolumeclaim', 'storage', 'volume'],
+            'storage': ['persistent', 'pvc', 'persistentvolumeclaim', 'persistence', 'volume'],
+            'harbor': ['registry', 'docker_registry', 'container_registry', 'image_registry'],
+            'registry': ['harbor', 'docker_registry', 'container_registry'],
+            'loadbalancer': ['lb', 'load_balancer', 'metallb', 'service'],
+            'kubernetes': ['k8s', 'kubectl', 'kube'],
+            'ansible': ['playbook', 'role', 'task'],
+            'monitoring': ['prometheus', 'grafana', 'metrics', 'observability'],
+            'security': ['tls', 'ssl', 'certificate', 'cert', 'secret'],
+            'deployment': ['deploy', 'rollout', 'install', 'setup']
+        }
+        
+        query_terms = query.lower().split()
+        expanded_terms = set(query_terms)
+        
+        for term in query_terms:
+            if term in synonyms:
+                expanded_terms.update(synonyms[term])
+            # Also check if term is a synonym of something
+            for key, values in synonyms.items():
+                if term in values:
+                    expanded_terms.add(key)
+                    expanded_terms.update(values)
+        
+        return list(expanded_terms)
+    
+    def index_project(self, force_reindex: bool = False, verbose: bool = False) -> Dict:
         """Index the entire project with repository-specific optimizations."""
         print(f"🔍 Indexing {self.config.get('repo_type', 'unknown')} repository...")
         
-        # Find files to index
+        # Find files to index - handle both simple and complex patterns
         files_to_index = []
         for pattern in self.config.get("file_patterns", ["*.md"]):
-            files_to_index.extend(self.project_root.rglob(pattern))
+            # Simple pattern like *.yml or *.md
+            if '*' in pattern and '/' not in pattern:
+                files_to_index.extend(self.project_root.rglob(pattern))
+            # Complex pattern with directory structure like roles/**/*.yml
+            elif '**' in pattern:
+                # Extract the base pattern for rglob
+                # roles/**/*.yml -> *.yml for rglob, then filter with full pattern
+                base_pattern = pattern.split('/')[-1] if '/' in pattern else pattern
+                for f in self.project_root.rglob(base_pattern):
+                    if self.should_index_file(f):
+                        files_to_index.append(f)
+            # Specific file pattern
+            else:
+                specific_file = self.project_root / pattern
+                if specific_file.exists():
+                    files_to_index.append(specific_file)
         
-        # Filter by exclusions
+        # Remove duplicates and filter by exclusions
+        files_to_index = list(set(files_to_index))
         files_to_index = [
             f for f in files_to_index 
             if self.should_index_file(f)
@@ -509,26 +610,36 @@ class MultiRepoRAGEngine:
         """)
     
     def search(self, query: str, limit: int = 10) -> Dict[str, List[Dict]]:
-        """Search across all indexed knowledge."""
+        """Search across all indexed knowledge with semantic matching."""
         results = {
             'concept_matches': [],
             'command_matches': [],
             'configuration_matches': [],
             'troubleshooting_matches': []
         }
+        
+        # Expand query with synonyms for better matching
+        expanded_queries = self._expand_search_terms(query)
         query_lower = query.lower()
         
         for doc_path, doc_info in self.index["documents"].items():
             knowledge = doc_info.get("knowledge", {})
             
-            # Search concepts
+            # Helper function for enhanced matching
+            def matches_query(text):
+                text_lower = text.lower()
+                return any(term in text_lower for term in expanded_queries)
+            
+            # Search concepts with semantic matching
             for concept in knowledge.get("concepts", []):
-                if query_lower in concept["name"].lower():
+                concept_text = concept["name"].lower()
+                if query_lower in concept_text or matches_query(concept["name"]):
+                    score = 10 if query_lower in concept_text else 5  # Exact match gets higher score
                     results['concept_matches'].append({
                         "file": doc_path,
                         "line": concept.get("line", "?"),
                         "concept": concept["name"],
-                        "score": 10
+                        "score": score
                     })
             
             # Search commands
