@@ -93,6 +93,7 @@ Examples:
         # Reindex command
         reindex_parser = subparsers.add_parser('reindex', help='Rebuild documentation index')
         reindex_parser.add_argument('--force', action='store_true', help='Force reindex all files')
+        reindex_parser.add_argument('--verbose', action='store_true', help='Show detailed indexing information')
         
         # Info command
         subparsers.add_parser('info', help='Show repository information')
@@ -480,11 +481,26 @@ Examples:
             return 1
         
         print("🔄 Rebuilding documentation index...")
-        results = engine.index_project(force_reindex=args.force)
+        
+        # Show patterns being used if verbose
+        if args.verbose:
+            print(f"📋 Repository type: {engine.config.get('repo_type', 'unknown')}")
+            print(f"📁 File patterns:")
+            for pattern in engine.config.get('file_patterns', []):
+                print(f"   - {pattern}")
+            print(f"🚫 Exclude patterns:")
+            for exclude in engine.config.get('exclude_paths', []):
+                print(f"   - {exclude}")
+            print()
+        
+        results = engine.index_project(force_reindex=args.force, verbose=args.verbose)
         
         print(f"✅ Reindexing complete!")
         print(f"📊 Processed: {results['indexed_files']} files")
         print(f"📁 Total files: {results['total_files']} files")
+        
+        if args.verbose and 'skipped_files' in results:
+            print(f"⏭️  Skipped: {results['skipped_files']} files")
         
         return 0
     
