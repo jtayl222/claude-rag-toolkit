@@ -258,12 +258,13 @@ Examples:
         print(f"🔍 Search results for: '{args.query}'")
         print("=" * 60)
         
-        categories = ['concept_matches', 'command_matches', 'configuration_matches', 'troubleshooting_matches']
+        categories = ['concept_matches', 'command_matches', 'configuration_matches', 'troubleshooting_matches', 'semantic_matches']
         category_icons = {
             'concept_matches': '💡',
             'command_matches': '⚡',
             'configuration_matches': '⚙️',
-            'troubleshooting_matches': '🔧'
+            'troubleshooting_matches': '🔧',
+            'semantic_matches': '🧠'
         }
         
         if args.category:
@@ -289,6 +290,9 @@ Examples:
                         print(f"  {i}. [{file}:{line}] {match.get('content', '')[:80]}...")
                     elif category == 'troubleshooting_matches':
                         print(f"  {i}. [{file}:{line}] ({match.get('type', '')}) {match.get('content', '')[:80]}...")
+                    elif category == 'semantic_matches':
+                        similarity = match.get('similarity', 0)
+                        print(f"  {i}. [{file}] (similarity: {similarity:.3f})")
                 
                 total_results += len(matches)
         
