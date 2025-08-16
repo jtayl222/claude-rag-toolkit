@@ -71,7 +71,42 @@ project-repo/                         # Any target project
 
 ### 1. Install Shared Toolkit
 
-#### Basic Installation (Zero Dependencies)
+#### Method A: Using pipx (Recommended for Global CLI)
+```bash
+# Clone the toolkit
+git clone https://github.com/yourusername/claude-rag-toolkit.git /home/user/REPOS/claude-rag-toolkit
+
+# Install pipx if not already installed
+sudo apt install pipx  # On Ubuntu/Debian
+# OR
+python3 -m pip install --user pipx
+
+# Install claude-rag globally
+pipx install -e /home/user/REPOS/claude-rag-toolkit
+
+# Now claude-rag is available everywhere
+claude-rag --help
+```
+
+#### Method B: Using Virtual Environment
+```bash
+# Clone the toolkit
+git clone https://github.com/yourusername/claude-rag-toolkit.git /home/user/REPOS/claude-rag-toolkit
+cd /home/user/REPOS/claude-rag-toolkit
+
+# Create and activate a virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install the toolkit
+pip install -e .
+
+# Create global alias (add to ~/.bashrc)
+echo 'alias claude-rag="/home/user/REPOS/claude-rag-toolkit/venv/bin/claude-rag"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+#### Method C: Standard pip install (if allowed by your system)
 ```bash
 # Clone the toolkit
 git clone https://github.com/yourusername/claude-rag-toolkit.git /home/user/REPOS/claude-rag-toolkit
@@ -79,6 +114,7 @@ cd /home/user/REPOS/claude-rag-toolkit
 
 # Basic installation - uses only Python standard library
 pip install -e .
+# Note: On modern systems, you may need: pip install --user -e . --break-system-packages
 ```
 
 #### Enhanced Installation Options
@@ -570,6 +606,28 @@ def test_specific_behavior(self, temp_dir):
 ## Troubleshooting
 
 ### Installation Issues
+
+#### Externally Managed Environment Error (PEP 668)
+```bash
+# Error: externally-managed-environment
+# This is a modern Python safety feature to prevent breaking system packages
+
+# Solution 1: Use pipx (recommended)
+sudo apt install pipx
+pipx install -e /home/user/REPOS/claude-rag-toolkit
+
+# Solution 2: Use virtual environment
+python3 -m venv venv
+source venv/bin/activate
+pip install -e .
+
+# Solution 3: Create alias to existing installation
+echo 'alias claude-rag="/path/to/existing/venv/bin/claude-rag"' >> ~/.bashrc
+source ~/.bashrc
+
+# Solution 4: Override (not recommended)
+pip install --user -e . --break-system-packages
+```
 
 #### Import Errors
 ```bash
