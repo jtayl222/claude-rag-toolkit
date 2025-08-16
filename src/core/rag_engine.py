@@ -17,8 +17,10 @@ import subprocess
 # Handle both relative and absolute imports
 try:
     from utils.repo_detector import RepositoryDetector
+    from utils.embedding_provider import EmbeddingProvider
 except ImportError:
     from ..utils.repo_detector import RepositoryDetector
+    from ..utils.embedding_provider import EmbeddingProvider
 
 
 class MultiRepoRAGEngine:
@@ -40,6 +42,12 @@ class MultiRepoRAGEngine:
         # Load or create configuration
         self.config = self._load_or_create_config()
         self.index = self._load_or_create_index()
+        
+        # Initialize embedding provider for semantic search
+        self.embedding_provider = EmbeddingProvider(project_root)
+        
+        # Track if semantic search is enabled
+        self.semantic_search_enabled = self.config.get("semantic_search", {}).get("enabled", True)
     
     def _load_or_create_config(self) -> Dict:
         """Load existing config or create new one with auto-detection."""
@@ -437,6 +445,135 @@ class MultiRepoRAGEngine:
         
         return list(expanded_terms)
     
+    def _create_searchable_text(self, knowledge: Dict) -> str:
+        """Create searchable text from extracted knowledge for semantic search."""
+        text_parts = []
+        
+        # Add concepts
+        for concept in knowledge.get("concepts", []):
+            text_parts.append(concept.get("name", ""))
+        
+        # Add command text
+        for cmd in knowledge.get("commands", []):
+            text_parts.append(cmd.get("command", ""))
+        
+        # Add configuration content
+        for config in knowledge.get("configurations", []):
+            text_parts.append(config.get("content", ""))
+        
+        # Add troubleshooting content
+        for trouble in knowledge.get("troubleshooting", []):
+            text_parts.append(trouble.get("content", ""))
+        
+        # Add MLOps-specific content
+        for task in knowledge.get("ansible_tasks", []):
+            text_parts.append(task.get("name", ""))
+        
+        for storage in knowledge.get("storage_configs", []):
+            text_parts.append(storage.get("content", ""))
+        
+        for harbor in knowledge.get("harbor_configs", []):
+            text_parts.append(harbor.get("content", ""))
+        
+        # Add ML model-specific content
+        for func in knowledge.get("functions", []):
+            text_parts.append(func.get("name", ""))
+        
+        # Filter out empty strings and join
+        filtered_parts = [part for part in text_parts if part.strip()]
+        return " ".join(filtered_parts)
+    
+    def _extract_pdf_knowledge(self, filepath: Path, relative_path: str) -> Dict:
+        """Extract knowledge from PDF files using text extraction."""
+        knowledge = {
+            "concepts": [],
+            "commands": [],
+            "configurations": [],
+            "troubleshooting": [],
+            "dependencies": [],
+            "cross_references": [],
+            "api_endpoints": [],
+            "functions": []
+        }
+        
+        try:
+            pdf_text = ""
+            
+            # Try pdfplumber first (better for complex layouts)
+            try:
+                import pdfplumber
+                with pdfplumber.open(filepath) as pdf:
+                    for page in pdf.pages:
+                        if page.extract_text():
+                            pdf_text += page.extract_text() + "\n"
+                print(f"  📑 Extracted text using pdfplumber")
+                
+            except ImportError:
+                # Fall back to PyPDF2
+                try:
+                    import PyPDF2
+                    with open(filepath, 'rb') as file:
+                        reader = PyPDF2.PdfReader(file)
+                        for page in reader.pages:
+                            pdf_text += page.extract_text() + "\n"
+                    print(f"  📑 Extracted text using PyPDF2")
+                    
+                except ImportError:
+                    # Basic metadata extraction only
+                    print(f"  ⚠️  No PDF libraries available, indexing metadata only")
+                    knowledge["concepts"].append({
+                        "name": f"PDF Document: {filepath.stem}",
+                        "line": 1,
+                        "type": "document",
+                        "metadata": {
+                            "filename": filepath.name,
+                            "size": filepath.stat().st_size,
+                            "path": relative_path
+                        }
+                    })
+                    return knowledge
+            
+            # If we extracted text, process it like any other document
+            if pdf_text.strip():
+                # Parse the extracted text as if it were a regular text document
+                lines = pdf_text.split('\n')
+                text_knowledge = self.extract_knowledge(pdf_text, relative_path)
+                
+                # Merge the extracted knowledge
+                for key, value in text_knowledge.items():
+                    if isinstance(value, list):
+                        knowledge[key].extend(value)
+                
+                # Add PDF-specific metadata
+                knowledge["concepts"].append({
+                    "name": f"PDF Document: {filepath.stem}",
+                    "line": 1,
+                    "type": "pdf_document",
+                    "metadata": {
+                        "filename": filepath.name,
+                        "size": filepath.stat().st_size,
+                        "pages": len(pdf_text.split('\f')) if '\f' in pdf_text else 1,
+                        "path": relative_path,
+                        "text_length": len(pdf_text)
+                    }
+                })
+            
+        except Exception as e:
+            print(f"  ⚠️  Warning: Could not process PDF {relative_path}: {e}")
+            # Still index basic metadata
+            knowledge["concepts"].append({
+                "name": f"PDF Document: {filepath.stem}",
+                "line": 1,
+                "type": "pdf_error",
+                "metadata": {
+                    "filename": filepath.name,
+                    "error": str(e),
+                    "path": relative_path
+                }
+            })
+        
+        return knowledge
+    
     def index_project(self, force_reindex: bool = False, verbose: bool = False) -> Dict:
         """Index the entire project with repository-specific optimizations."""
         print(f"🔍 Indexing {self.config.get('repo_type', 'unknown')} repository...")
@@ -484,8 +621,11 @@ class MultiRepoRAGEngine:
                 
                 print(f"  📄 {relative_path}")
                 
-                # Extract knowledge
-                knowledge = self.extract_knowledge(content, relative_path)
+                # Handle PDF files differently
+                if filepath.suffix.lower() == '.pdf':
+                    knowledge = self._extract_pdf_knowledge(filepath, relative_path)
+                else:
+                    knowledge = self.extract_knowledge(content, relative_path)
                 
                 # Store in index
                 self.index["documents"][relative_path] = {
@@ -495,6 +635,12 @@ class MultiRepoRAGEngine:
                     "last_indexed": datetime.now().isoformat(),
                     "knowledge": knowledge
                 }
+                
+                # Compute and cache document embedding for semantic search
+                if self.semantic_search_enabled and self.embedding_provider.is_available():
+                    doc_embedding = self.embedding_provider.get_document_embedding(relative_path, content)
+                    if doc_embedding is not None:
+                        print(f"  🧠 Computed embedding for semantic search")
                 
                 indexed_count += 1
                 
@@ -511,6 +657,11 @@ class MultiRepoRAGEngine:
         
         # Save index
         self._save_index()
+        
+        # Save embedding cache if semantic search was used
+        if self.semantic_search_enabled and self.embedding_provider.is_available():
+            self.embedding_provider.save_cache()
+            print(f"💾 Saved embedding cache")
         
         print(f"✅ Indexed {indexed_count} files")
         self._print_stats()
@@ -609,18 +760,50 @@ class MultiRepoRAGEngine:
   Knowledge Graph Nodes: {len(self.index.get('knowledge_graph', {}))}
         """)
     
-    def search(self, query: str, limit: int = 10) -> Dict[str, List[Dict]]:
-        """Search across all indexed knowledge with semantic matching."""
+    def search(self, query: str, limit: int = 10, use_semantic: bool = None) -> Dict[str, List[Dict]]:
+        """Search across all indexed knowledge with hybrid exact + semantic matching."""
         results = {
             'concept_matches': [],
             'command_matches': [],
             'configuration_matches': [],
-            'troubleshooting_matches': []
+            'troubleshooting_matches': [],
+            'semantic_matches': []
         }
+        
+        # Determine if we should use semantic search
+        if use_semantic is None:
+            use_semantic = self.semantic_search_enabled and self.embedding_provider.is_available()
         
         # Expand query with synonyms for better matching
         expanded_queries = self._expand_search_terms(query)
         query_lower = query.lower()
+        
+        # Semantic search component
+        semantic_scores = {}
+        if use_semantic:
+            document_texts = {}
+            for doc_path, doc_info in self.index["documents"].items():
+                # Create searchable text from document
+                searchable_text = self._create_searchable_text(doc_info.get("knowledge", {}))
+                if searchable_text:
+                    document_texts[doc_path] = searchable_text
+            
+            if document_texts:
+                semantic_results = self.embedding_provider.find_similar_documents(
+                    query, 
+                    document_texts, 
+                    top_k=limit * 2,  # Get more candidates for filtering
+                    similarity_threshold=self.config.get("semantic_search", {}).get("similarity_threshold", 0.3)
+                )
+                
+                # Convert to scores dict and add to results
+                for doc_path, similarity in semantic_results:
+                    semantic_scores[doc_path] = similarity
+                    results['semantic_matches'].append({
+                        "file": doc_path,
+                        "similarity": similarity,
+                        "score": int(similarity * 10)  # Convert to integer score
+                    })
         
         for doc_path, doc_info in self.index["documents"].items():
             knowledge = doc_info.get("knowledge", {})
@@ -630,11 +813,15 @@ class MultiRepoRAGEngine:
                 text_lower = text.lower()
                 return any(term in text_lower for term in expanded_queries)
             
+            # Calculate base score boost from semantic similarity
+            semantic_boost = int(semantic_scores.get(doc_path, 0) * 5)  # 0-5 boost
+            
             # Search concepts with semantic matching
             for concept in knowledge.get("concepts", []):
                 concept_text = concept["name"].lower()
                 if query_lower in concept_text or matches_query(concept["name"]):
                     score = 10 if query_lower in concept_text else 5  # Exact match gets higher score
+                    score += semantic_boost  # Add semantic similarity boost
                     results['concept_matches'].append({
                         "file": doc_path,
                         "line": concept.get("line", "?"),
@@ -645,33 +832,36 @@ class MultiRepoRAGEngine:
             # Search commands
             for cmd in knowledge.get("commands", []):
                 if query_lower in cmd["command"].lower():
+                    score = 5 + semantic_boost
                     results['command_matches'].append({
                         "file": doc_path,
                         "line": cmd.get("line", "?"),
                         "command": cmd["command"],
                         "type": cmd.get("type", "shell"),
-                        "score": 5
+                        "score": score
                     })
             
             # Search configurations
             for config in knowledge.get("configurations", []):
                 if query_lower in config.get("content", "").lower():
+                    score = 3 + semantic_boost
                     results['configuration_matches'].append({
                         "file": doc_path,
                         "line": config.get("line", "?"),
                         "content": config.get("content", ""),
-                        "score": 3
+                        "score": score
                     })
             
             # Search troubleshooting
             for trouble in knowledge.get("troubleshooting", []):
                 if query_lower in trouble.get("content", "").lower():
+                    score = 3 + semantic_boost
                     results['troubleshooting_matches'].append({
                         "file": doc_path,
                         "line": trouble.get("line", "?"),
                         "content": trouble.get("content", ""),
                         "type": trouble.get("type", "issue"),
-                        "score": 3
+                        "score": score
                     })
         
         # Sort and limit each category
