@@ -22,9 +22,24 @@ setup(
     package_dir={"": "src"},
     python_requires=">=3.8",
     install_requires=[
-        # No dependencies by default - all optional
+        # Full package by default - includes all enhancements
+        "rich>=13.0.0",                   # Better terminal output, tables, progress bars
+        "click>=8.0.0",                   # Enhanced CLI argument parsing
+        "pydantic>=2.0.0",                # Configuration validation and data models
+        "orjson>=3.9.0",                  # Faster JSON parsing for large files
+        "rapidfuzz>=3.0.0",               # Better fuzzy matching for search
+        "PyPDF2>=3.0.0",                  # PDF text extraction
+        "pdfplumber>=0.9.0",              # Advanced PDF parsing
+        "sentence-transformers>=2.2.0",   # Local embedding models
+        "numpy>=1.21.0",                  # Vector operations
+        "scikit-learn>=1.0.0",            # Similarity calculations
     ],
     extras_require={
+        # Minimal installation - no dependencies (for lightweight deployments)
+        "minimal": [
+            # No dependencies - uses Python standard library only
+        ],
+        
         # Enhanced CLI experience with rich output and progress bars
         "rich": [
             "rich>=13.0.0",           # Better terminal output, tables, progress bars
@@ -38,13 +53,17 @@ setup(
             "rapidfuzz>=3.0.0",       # Better fuzzy matching for search
         ],
         
-        # All enhancements combined
-        "full": [
-            "rich>=13.0.0",
-            "click>=8.0.0", 
-            "pydantic>=2.0.0",
-            "orjson>=3.9.0",
-            "rapidfuzz>=3.0.0",
+        # PDF processing support
+        "pdf": [
+            "PyPDF2>=3.0.0",              # PDF text extraction
+            "pdfplumber>=0.9.0",          # Advanced PDF parsing
+        ],
+        
+        # Semantic search with embeddings
+        "embeddings": [
+            "sentence-transformers>=2.2.0",   # Local embedding models
+            "numpy>=1.21.0",                  # Vector operations
+            "scikit-learn>=1.0.0",            # Similarity calculations
         ],
         
         # MCP protocol support (future)
