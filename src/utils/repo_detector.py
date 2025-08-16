@@ -415,8 +415,25 @@ class RepositoryDetector:
                     "scripts/*.sh", "docs/*.md"
                 ],
                 "exclude_paths": [
-                    ".git", "node_modules", "__pycache__", "venv", "env",
-                    "*.log", "tmp/", ".cache/", ".ansible/", "fetched_tokens/"
+                    # Version control and package managers
+                    ".git", ".svn", ".hg", ".bzr",
+                    "node_modules", "bower_components", "jspm_packages",
+                    # Python environments and cache
+                    "__pycache__", "*.pyc", "*.pyo", "*.pyd", ".Python",
+                    "venv", "env", ".venv", ".env", "virtualenv", ".virtualenv",
+                    ".tox", ".pytest_cache", ".coverage", ".cache",
+                    "pip-log.txt", "pip-delete-this-directory.txt",
+                    # Build artifacts and temporary files
+                    "build/", "dist/", "*.egg-info/", "target/", "out/",
+                    "tmp/", "temp/", "*.tmp", "*.log", "*.swp", "*.swo",
+                    # Additional caches
+                    ".mypy_cache",
+                    # IDE and editor files
+                    ".vscode", ".idea", "*.sublime-*", ".vs",
+                    # Platform-specific
+                    ".ansible", "fetched_tokens",
+                    # RAG system files
+                    ".claude-rag"
                 ],
                 "extraction_focus": [
                     "ansible_tasks", "kubernetes_resources", "shell_commands",
@@ -437,9 +454,25 @@ class RepositoryDetector:
                     "notebooks/*.ipynb", "src/**/*.py"
                 ],
                 "exclude_paths": [
-                    ".git", "__pycache__", "venv", "env", ".pytest_cache",
-                    "*.pyc", "models/saved/", "data/raw/", "mlruns/",
-                    ".ipynb_checkpoints/"
+                    # Version control
+                    ".git", ".svn", ".hg",
+                    # Python environments and cache
+                    "__pycache__", "*.pyc", "*.pyo", "*.pyd", ".Python",
+                    "venv", "env", ".venv", ".env", "virtualenv", ".virtualenv",
+                    ".tox", ".pytest_cache", ".coverage", ".cache",
+                    # Jupyter and ML artifacts
+                    ".ipynb_checkpoints", "mlruns", "wandb", "tensorboard_logs",
+                    # Additional caches
+                    ".mypy_cache",
+                    "models/saved", "models/checkpoints", "data/raw", "data/cache",
+                    # Build and dependencies
+                    "build", "dist", "*.egg-info", "node_modules",
+                    # IDE files
+                    ".vscode", ".idea", "*.sublime-*",
+                    # Temporary files
+                    "tmp/", "temp/", "*.tmp", "*.log", "*.swp",
+                    # RAG system files
+                    ".claude-rag"
                 ],
                 "extraction_focus": [
                     "python_functions", "jupyter_cells", "model_configs",
@@ -457,7 +490,20 @@ class RepositoryDetector:
                     "k8s/**/*.yaml", "manifests/**/*.yaml"
                 ],
                 "exclude_paths": [
-                    ".git", "node_modules", ".helm/", "charts/*/charts/"
+                    # Version control
+                    ".git", ".svn", ".hg",
+                    # Node.js dependencies
+                    "node_modules", "bower_components", "jspm_packages",
+                    # Kubernetes and Helm artifacts
+                    ".helm/", "charts/*/charts/", ".kube/",
+                    # Build artifacts
+                    "build/", "dist/", "target/", "out/",
+                    # Cache and temporary files
+                    ".cache/", ".mypy_cache", "tmp/", "temp/", "*.tmp", "*.log",
+                    # IDE files
+                    ".vscode", ".idea", "*.sublime-*",
+                    # RAG system files
+                    ".claude-rag"
                 ],
                 "extraction_focus": [
                     "kubernetes_resources", "helm_charts", "kustomize_configs"
@@ -475,7 +521,20 @@ class RepositoryDetector:
                     "inventory/**/*", "group_vars/**/*.yml"
                 ],
                 "exclude_paths": [
-                    ".git", ".ansible/", "*.retry", "*.log"
+                    # Version control
+                    ".git", ".svn", ".hg",
+                    # Ansible artifacts
+                    ".ansible", "*.retry", "*.log", "ansible.log",
+                    # Python environments (common in Ansible projects)
+                    "__pycache__", "*.pyc", "venv", "env", ".venv",
+                    # Dependencies
+                    "node_modules", "bower_components",
+                    # Build and cache
+                    "build/", "dist/", ".cache/", ".mypy_cache", "tmp/", "temp/",
+                    # IDE files
+                    ".vscode", ".idea", "*.sublime-*",
+                    # RAG system files
+                    ".claude-rag"
                 ],
                 "extraction_focus": [
                     "ansible_tasks", "playbook_structure", "role_definitions"
@@ -492,8 +551,24 @@ class RepositoryDetector:
                     "requirements.txt", "setup.py", "pyproject.toml"
                 ],
                 "exclude_paths": [
-                    ".git", "__pycache__", "venv", "env", ".tox/",
-                    "*.pyc", ".pytest_cache/", "build/", "dist/"
+                    # Version control
+                    ".git", ".svn", ".hg", ".bzr",
+                    # Python environments and cache
+                    "__pycache__", "*.pyc", "*.pyo", "*.pyd", ".Python",
+                    "venv", "env", ".venv", ".env", "virtualenv", ".virtualenv",
+                    ".tox", ".pytest_cache", ".coverage", ".cache", ".mypy_cache",
+                    "pip-log.txt", "pip-delete-this-directory.txt",
+                    # Build artifacts
+                    "build", "dist", "*.egg-info", "*.egg", "*.whl",
+                    # Dependencies
+                    "node_modules", "bower_components",
+                    # IDE and editor files
+                    ".vscode", ".idea", "*.sublime-*", ".vs", ".spyderproject",
+                    # OS and temporary files
+                    ".DS_Store", "Thumbs.db", "tmp/", "temp/", "*.tmp", "*.log",
+                    "*.swp", "*.swo", "*~",
+                    # RAG system files
+                    ".claude-rag"
                 ],
                 "extraction_focus": [
                     "python_functions", "class_definitions", "api_endpoints"
@@ -510,7 +585,23 @@ class RepositoryDetector:
                     "docs/**/*.md", "wiki/**/*.md"
                 ],
                 "exclude_paths": [
-                    ".git", "node_modules", "_site/", ".jekyll-cache/"
+                    # Version control
+                    ".git", ".svn", ".hg",
+                    # Node.js dependencies
+                    "node_modules", "bower_components", "jspm_packages",
+                    # Documentation site generators
+                    "_site/", ".jekyll-cache/", "_build/", ".sphinx-build/",
+                    ".docusaurus/", "public/", ".next/", ".nuxt/",
+                    # Build artifacts
+                    "build/", "dist/", "out/", "target/",
+                    # Cache and temporary files
+                    ".cache/", ".mypy_cache", "tmp/", "temp/", "*.tmp", "*.log",
+                    # IDE files
+                    ".vscode", ".idea", "*.sublime-*",
+                    # OS files
+                    ".DS_Store", "Thumbs.db",
+                    # RAG system files
+                    ".claude-rag"
                 ],
                 "extraction_focus": [
                     "documentation_structure", "cross_references", "tutorials"
