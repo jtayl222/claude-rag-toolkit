@@ -47,7 +47,7 @@ class RAGToolkitCLI:
             formatter_class=argparse.RawDescriptionHelpFormatter,
             epilog="""
 Examples:
-  claude-rag init --repo-type mlops-platform    Initialize RAG system for MLOps platform
+  claude-rag init                               Initialize universal RAG system
   claude-rag search "harbor registry"           Search for harbor registry information
   claude-rag troubleshoot "port 6443"           Find solutions for port 6443 issues
   claude-rag context README.md                  Get context for README.md file
@@ -60,8 +60,8 @@ Examples:
         
         # Init command
         init_parser = subparsers.add_parser('init', help='Initialize RAG system in current project')
-        init_parser.add_argument('--repo-type', choices=['mlops-platform', 'ml-model', 'kubernetes', 'ansible', 'python', 'documentation', 'generic'], 
-                               help='Specify repository type (auto-detected if not provided)')
+        init_parser.add_argument('--repo-type', choices=['universal'], 
+                               help='Repository type (universal for all project types)')
         init_parser.add_argument('--force', action='store_true', help='Overwrite existing configuration')
         
         # Search command
@@ -214,13 +214,13 @@ Examples:
         # Initialize RAG engine (will auto-detect repo type and create config)
         engine = MultiRepoRAGEngine(str(project_root))
         
-        # Override repo type if specified
+        # Override repo type if specified (though it's always universal now)
         if args.repo_type:
             config = engine.config
             config['repo_type'] = args.repo_type
             with open(config_path, 'w') as f:
                 json.dump(config, f, indent=2)
-            print(f"🔧 Repository type set to: {args.repo_type}")
+            print(f"🔧 Repository type: {args.repo_type}")
         
         # Run initial indexing
         print("📚 Running initial indexing...")
@@ -232,14 +232,36 @@ Examples:
         
         # Add gitignore entry for generated files
         gitignore_path = project_root / '.gitignore'
-        gitignore_entry = ".claude-rag/index.json\n.claude-rag/cache.json\n.claude-rag/*.tmp\n"
+        gitignore_entries = [
+            ".claude-rag/index.json",
+            ".claude-rag/cache.json", 
+            ".claude-rag/config.json",
+            ".claude-rag/embeddings/",
+            ".claude-rag/*.tmp",
+            ".claude-rag/*.log"
+        ]
+        gitignore_entry = "\n".join(gitignore_entries) + "\n"
         
         if gitignore_path.exists():
             content = gitignore_path.read_text()
-            if '.claude-rag/' not in content:
+            
+            # Check which entries are missing
+            missing_entries = []
+            for entry in gitignore_entries:
+                if entry not in content:
+                    missing_entries.append(entry)
+            
+            if missing_entries:
+                # Add missing entries
                 with open(gitignore_path, 'a') as f:
-                    f.write(f"\n# Claude RAG generated files\n{gitignore_entry}")
-                print("📝 Added .claude-rag/ entries to .gitignore")
+                    if '.claude-rag/' not in content:
+                        # First time adding Claude RAG entries
+                        f.write(f"\n# Claude RAG generated files\n")
+                    for entry in missing_entries:
+                        f.write(f"{entry}\n")
+                print(f"📝 Added {len(missing_entries)} Claude RAG entries to .gitignore")
+            else:
+                print("✅ .gitignore already has all Claude RAG entries")
         else:
             with open(gitignore_path, 'w') as f:
                 f.write(f"# Claude RAG generated files\n{gitignore_entry}")
